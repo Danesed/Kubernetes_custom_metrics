@@ -1,0 +1,79 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: php-apache
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: php-apache
+  template:
+    metadata:
+      labels:
+        app: php-apache
+    spec:
+      containers:
+      - name: php-apache
+        image: k8s.gcr.io/hpa-example
+        ports:
+        - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: php-apache
+  labels:
+    app: php-apache
+spec:
+  ports:
+  - name: metrics-svc-port
+    port: 80
+    targetPort: 80
+  selector:
+    app: php-apache
+---
+
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: php-apache
+  namespace: default
+  labels:
+    release: mon
+spec:
+  jobLabel: php-apache
+  selector:
+    matchLabels:
+      app: php-apache
+  endpoints:
+  - port: metrics-svc-port
+    interval: 10s
+    path: /metrics
+---
+
+apiVersion: autoscaling/v2beta2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: php-apache
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: php-apache
+  minReplicas: 1
+  maxReplicas: 10
+  metrics:
+  - type: Pods
+    pods:
+      metric:
+        name: packets-per-minute
+      target:
+        type: Value
+        averageValue: 60k 
+  - type: Pods
+    pods:
+      metric:
+        name: Bytes_rate
+      target:
+        type: Value
+        averageValue: 10k 

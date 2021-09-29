@@ -1,0 +1,22 @@
+prometheus:
+  url: http://[NAME]-kube-prometheus-stack-prometheus.default.svc
+  port: 9090
+
+rules:
+  custom:
+  - seriesQuery: '{__name__=~"container_network_receive_packets_total"}'
+    resources:
+      overrides:
+      template: "<<.Resource>>"
+    name:
+      matches: "container_network_receive_packets_total"
+      as: "packets-per-minute"
+    metricsQuery: sum(sum_over_time(<<.Series>>{pod=~"php-apache.*"}[1m])) by (<<.GroupBy>>)
+- seriesQuery: '{__name__=~"container_network_receive_bytes_total"}'
+    resources:
+      overrides:
+      template: "<<.Resource>>"
+    name:
+      matches: "container_network_receive_bytes_total"
+      as: "Bytes_rate"
+    metricsQuery: sum(rate(<<.Series>>{pod=~"php-apache.*"}[5m])) by (<<.GroupBy>>)
